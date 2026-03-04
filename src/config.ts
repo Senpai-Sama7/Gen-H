@@ -209,24 +209,24 @@ export const footerConfig: FooterConfig = {
   contact: [
     {
       type: "email",
-      label: "advisors@genh.studio",
-      value: "advisors@genh.studio",
-      href: "mailto:advisors@genh.studio",
+      label: "DouglasMitchell@ReliantAI.org",
+      value: "DouglasMitchell@ReliantAI.org",
+      href: "mailto:DouglasMitchell@ReliantAI.org",
     },
     {
       type: "phone",
-      label: "(555) 014-8891",
-      value: "(555) 014-8891",
-      href: "tel:+15550148891",
+      label: "(832) 947-7028",
+      value: "(832) 947-7028",
+      href: "tel:+18329477028",
     },
   ],
   locationLabel: "Location",
-  address: ["Austin, TX", "Remote Worldwide"],
+  address: ["Houston, TX", "Remote Worldwide"],
   socialLabel: "Follow",
   socials: [
     {
-      platform: "instagram",
-      href: "https://instagram.com/genhstudio",
+      platform: "linkedin",
+      href: "https://www.linkedin.com/in/douglas-mitchell-the-architect",
     },
     {
       platform: "facebook",
