@@ -178,8 +178,8 @@ export default async function HomePage() {
           <span className="eyebrow">Strategic intake</span>
           <h2>Submit a commercial brief and capture it directly in the backend.</h2>
           <p>
-            The form below is fully wired. Locally it stores into a JSON ledger for testing. In production, connect Vercel Blob and
-            the same route becomes your durable intake endpoint without changing the frontend.
+            The form below is fully wired. Locally it stores into a JSON ledger for testing. In production, the same route persists
+            directly into Vercel Blob without changing the frontend.
           </p>
         </div>
         <div className="form-shell">

@@ -27,6 +27,7 @@ Open `http://localhost:3000`.
 1. Import `genh-premium-site` as a new Vercel project.
 2. Add these environment variables:
    - `BLOB_READ_WRITE_TOKEN`
+   - `INQUIRY_BLOB_PATH` (recommended so the Blob snapshot prefix is not guessable)
    - `OPS_BASIC_USER`
    - `OPS_BASIC_PASS`
    - `RESEND_API_KEY` (recommended)
@@ -38,7 +39,7 @@ Open `http://localhost:3000`.
 
 The repository also includes `vercel.json` with security headers and a GitHub Actions workflow at `.github/workflows/genh-premium-site.yml` that runs a production build on every push or pull request affecting this app.
 
-Without Vercel Blob, the frontend still renders, but inquiry submissions are blocked in production by design.
+Without Vercel Blob, the frontend still renders, but inquiry submissions are blocked in production by design. For Vercel Blob, this app writes immutable JSON snapshots under a single prefix and reads the latest snapshot, so use a randomized `INQUIRY_BLOB_PATH` value in production.
 
 ## Protected operator desk
 

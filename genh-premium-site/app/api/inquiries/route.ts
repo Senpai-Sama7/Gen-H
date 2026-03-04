@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createInquiry, getStorageMode, listInquiries } from "@/lib/inquiries";
+import { createInquiry, getStorageMode, listInquiriesWithSnapshot } from "@/lib/inquiries";
 import { notifyNewInquiry } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +17,17 @@ const inquirySchema = z.object({
   goals: z.string().min(20).max(1200)
 });
 
-export async function GET() {
-  const records = await listInquiries(10);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const snapshotPath = searchParams.get("snapshot") ?? undefined;
+  const result = await listInquiriesWithSnapshot(10, snapshotPath);
 
   return NextResponse.json({
     success: true,
     storage: getStorageMode(),
-    count: records.length,
-    records
+    count: result.records.length,
+    records: result.records,
+    snapshotPath: result.snapshotPath
   });
 }
 
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const record = await createInquiry(parsed.data);
+    const { record, snapshotPath } = await createInquiry(parsed.data);
     const notification = await notifyNewInquiry(record).catch((error) => ({
       status: "failed" as const,
       detail: error instanceof Error ? error.message : "Unexpected notification failure."
@@ -55,6 +58,7 @@ export async function POST(request: Request) {
         success: true,
         storage: getStorageMode(),
         record,
+        snapshotPath,
         notification,
         message: "Inquiry received. A strategist will reply within one business day."
       },

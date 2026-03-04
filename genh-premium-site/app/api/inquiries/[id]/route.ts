@@ -30,9 +30,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const record = await updateInquiry(id, parsed.data);
+  const { searchParams } = new URL(request.url);
+  const snapshotPath = searchParams.get("snapshot") ?? undefined;
+  const result = await updateInquiry(id, parsed.data, snapshotPath);
 
-  if (!record) {
+  if (!result) {
     return NextResponse.json(
       {
         success: false,
@@ -44,7 +46,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   return NextResponse.json({
     success: true,
-    record,
+    record: result.record,
+    snapshotPath: result.snapshotPath,
     message: "Inquiry updated."
   });
 }

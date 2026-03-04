@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { InquiryRecord, InquiryStatus } from "@/lib/types";
 
 type Props = {
   initialRecords: InquiryRecord[];
+  initialSnapshotPath: string | null;
 };
 
 type SaveState = {
@@ -17,12 +18,48 @@ type DraftMap = Record<string, { status: InquiryStatus; notes: string }>;
 
 type SaveMap = Record<string, SaveState>;
 
-export function OpsDesk({ initialRecords }: Props) {
+export function OpsDesk({ initialRecords, initialSnapshotPath }: Props) {
   const [records, setRecords] = useState(initialRecords);
+  const [snapshotPath, setSnapshotPath] = useState<string | null>(initialSnapshotPath);
   const [drafts, setDrafts] = useState<DraftMap>(() =>
     Object.fromEntries(initialRecords.map((record) => [record.id, { status: record.status, notes: record.notes }]))
   );
   const [saveState, setSaveState] = useState<SaveMap>({});
+
+  useEffect(() => {
+    const cacheKey = "genh-premium-site:last-snapshot";
+    const cachedSnapshot = window.sessionStorage.getItem(cacheKey);
+
+    if (!cachedSnapshot) {
+      if (initialSnapshotPath) {
+        window.sessionStorage.setItem(cacheKey, initialSnapshotPath);
+      }
+      return;
+    }
+
+    if (cachedSnapshot === initialSnapshotPath) {
+      return;
+    }
+
+    const endpoint = new URL("/api/inquiries", window.location.origin);
+    endpoint.searchParams.set("snapshot", cachedSnapshot);
+
+    void fetch(endpoint.toString())
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok || !payload?.records) {
+          throw new Error(payload?.message || "Failed to refresh records.");
+        }
+
+        setRecords(payload.records);
+        setSnapshotPath(payload.snapshotPath ?? cachedSnapshot);
+        setDrafts(Object.fromEntries(payload.records.map((record: InquiryRecord) => [record.id, { status: record.status, notes: record.notes }])));
+      })
+      .catch(() => {
+        window.sessionStorage.removeItem(cacheKey);
+      });
+  }, [initialSnapshotPath]);
 
   const summary = useMemo(() => {
     return {
@@ -55,8 +92,12 @@ export function OpsDesk({ initialRecords }: Props) {
     }));
 
     try {
-      const endpoint = new URL(`/api/inquiries/${id}`, window.location.origin).toString();
-      const response = await fetch(endpoint, {
+      const endpoint = new URL(`/api/inquiries/${id}`, window.location.origin);
+      if (snapshotPath) {
+        endpoint.searchParams.set("snapshot", snapshotPath);
+      }
+
+      const response = await fetch(endpoint.toString(), {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
@@ -71,6 +112,10 @@ export function OpsDesk({ initialRecords }: Props) {
       }
 
       setRecords((current) => current.map((record) => (record.id === id ? payload.record : record)));
+      if (payload.snapshotPath) {
+        setSnapshotPath(payload.snapshotPath);
+        window.sessionStorage.setItem("genh-premium-site:last-snapshot", payload.snapshotPath);
+      }
       setDrafts((current) => ({
         ...current,
         [id]: {

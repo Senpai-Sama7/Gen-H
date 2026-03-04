@@ -3,6 +3,10 @@ import type { NextRequest } from "next/server";
 
 const AUTH_REALM = 'Basic realm="GEN-H Ops"';
 
+function readEnv(name: string) {
+  return process.env[name]?.trim() ?? "";
+}
+
 function unauthorized(message: string, status = 401) {
   return new NextResponse(message, {
     status,
@@ -32,8 +36,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const username = process.env.OPS_BASIC_USER;
-  const password = process.env.OPS_BASIC_PASS;
+  const username = readEnv("OPS_BASIC_USER");
+  const password = readEnv("OPS_BASIC_PASS");
 
   if (!username || !password) {
     return unauthorized("OPS_BASIC_USER and OPS_BASIC_PASS must be configured before protected routes can be used.", 503);

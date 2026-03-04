@@ -1,11 +1,12 @@
 import { OpsDesk } from "@/components/ops-desk";
-import { getInquiryDashboard, listInquiries } from "@/lib/inquiries";
+import { getInquiryDashboard, listInquiriesWithSnapshot } from "@/lib/inquiries";
 
 export const dynamic = "force-dynamic";
 
 export default async function OpsPage() {
   const dashboard = await getInquiryDashboard();
-  const records = await listInquiries(50);
+  const inquiryList = await listInquiriesWithSnapshot(50);
+  const records = inquiryList.records;
 
   return (
     <main className="site-shell" style={{ minHeight: "100vh", paddingBottom: 64 }}>
@@ -60,7 +61,7 @@ export default async function OpsPage() {
           </p>
         </div>
 
-        <OpsDesk initialRecords={records} />
+        <OpsDesk initialRecords={records} initialSnapshotPath={inquiryList.snapshotPath} />
       </section>
     </main>
   );
