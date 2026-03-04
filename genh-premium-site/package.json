@@ -1,1 +1,27 @@
-{\n  \"name\": \"genh-premium-site\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"dependencies\": {\n    \"next\": \"14.0.0\",\n    \"react\": \"^18.0.0\",\n    \"react-dom\": \"^18.0.0\",\n    \"@vercel/analytics\": \"^0.3.0\"\n  },\n  \"scripts\": {\n    \"dev\": \"next dev\",\n    \"build\": \"next build\",\n    \"start\": \"next start\"\n  }\n}
+{
+  "name": "genh-premium-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "NODE_ENV=development next dev",
+    "build": "NODE_ENV=production next build",
+    "start": "NODE_ENV=production next start",
+    "check": "npm run build"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.0",
+    "next": "15.5.10",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.24",
+    "@types/react": "19.1.13",
+    "@types/react-dom": "19.1.9",
+    "typescript": "5.8.2"
+  },
+  "engines": {
+    "node": ">=20.10.0"
+  }
+}

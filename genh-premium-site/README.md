@@ -36,6 +36,8 @@ Open `http://localhost:3000`.
    - `COMPANY_EMAIL` (optional)
 3. Deploy.
 
+The repository also includes `vercel.json` with security headers and a GitHub Actions workflow at `.github/workflows/genh-premium-site.yml` that runs a production build on every push or pull request affecting this app.
+
 Without Vercel KV, the frontend still renders, but inquiry submissions are blocked in production by design.
 
 ## Protected operator desk
@@ -62,3 +64,6 @@ Returns the latest inquiry records.
 
 ### `GET /api/health`
 Returns runtime health and storage mode.
+
+### `GET /api/readiness`
+Returns a structured deployment-readiness report, including whether the app is ready for deploy and launch.

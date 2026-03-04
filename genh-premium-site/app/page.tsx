@@ -196,6 +196,9 @@ export default async function HomePage() {
           <a className="secondary-link" href="/api/health">
             Check API health
           </a>
+          <a className="secondary-link" href="/api/readiness">
+            Inspect deployment readiness
+          </a>
           <a className="primary-button" href="/ops">
             Open operator desk
           </a>
