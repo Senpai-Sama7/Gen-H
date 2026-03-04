@@ -1,5 +1,4 @@
-import type { CSSProperties } from "react";
-
+import { OpsDesk } from "@/components/ops-desk";
 import { getInquiryDashboard, listInquiries } from "@/lib/inquiries";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +15,7 @@ export default async function OpsPage() {
           <h1 style={{ maxWidth: "7ch" }}>Review inbound demand without leaving the app.</h1>
           <p className="lead-copy">
             This route is Basic Auth protected. It is intended for owners, office managers, and sales operators who need a quick
-            read on active demand without exposing inquiry records publicly.
+            read on active demand, update dispositions, and leave next-step notes without exposing inquiry records publicly.
           </p>
           <div className="hero-actions">
             <a className="secondary-link" href="/api/inquiries">
@@ -57,111 +56,12 @@ export default async function OpsPage() {
           <h2 style={{ maxWidth: "10ch" }}>Every inquiry captured by the live intake endpoint.</h2>
           <p style={{ marginTop: 16 }}>
             The operator desk reads directly from the backend. Public visitors can submit inquiries, but only authenticated users
-            can inspect this table and the raw JSON export.
+            can inspect, qualify, book, and annotate records here.
           </p>
         </div>
 
-        {records.length === 0 ? (
-          <div className="empty-state" style={{ marginTop: 18 }}>
-            <strong>No inquiries captured yet.</strong>
-            <span>Submit the public intake form first, then return here.</span>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto", marginTop: 20 }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 0,
-                minWidth: 920,
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 22,
-                overflow: "hidden",
-                background: "linear-gradient(180deg, rgba(28, 28, 42, 0.66), rgba(14, 14, 22, 0.74))"
-              }}
-            >
-              <thead>
-                <tr>
-                  {[
-                    "Company",
-                    "Contact",
-                    "Type",
-                    "Budget",
-                    "Launch",
-                    "Status",
-                    "Captured",
-                    "Goal"
-                  ].map((heading) => (
-                    <th
-                      key={heading}
-                      style={{
-                        textAlign: "left",
-                        padding: "14px 16px",
-                        borderBottom: "1px solid rgba(255,255,255,0.08)",
-                        fontSize: "0.82rem",
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: "#d8a85f",
-                        background: "rgba(255,255,255,0.02)"
-                      }}
-                    >
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((record) => (
-                  <tr key={record.id}>
-                    <td style={cellStyle}>
-                      <strong style={{ display: "block", color: "#f6f0e4" }}>{record.company}</strong>
-                      <span style={mutedText}>{record.email}</span>
-                    </td>
-                    <td style={cellStyle}>
-                      <strong style={{ display: "block", color: "#f6f0e4" }}>{record.name}</strong>
-                      <span style={mutedText}>{record.phone}</span>
-                    </td>
-                    <td style={cellStyle}>{record.projectType}</td>
-                    <td style={cellStyle}>{record.budgetBand}</td>
-                    <td style={cellStyle}>{record.launchWindow}</td>
-                    <td style={cellStyle}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          color: "#8cd9af",
-                          background: "rgba(140, 217, 175, 0.08)",
-                          textTransform: "capitalize"
-                        }}
-                      >
-                        {record.status}
-                      </span>
-                    </td>
-                    <td style={cellStyle}>{new Date(record.createdAt).toLocaleString()}</td>
-                    <td style={{ ...cellStyle, minWidth: 280 }}>{record.goals}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <OpsDesk initialRecords={records} />
       </section>
     </main>
   );
 }
-
-const cellStyle: CSSProperties = {
-  padding: "16px",
-  borderBottom: "1px solid rgba(255,255,255,0.05)",
-  verticalAlign: "top",
-  color: "#f6f0e4",
-  fontSize: "0.95rem",
-  lineHeight: 1.55
-};
-
-const mutedText: CSSProperties = {
-  color: "#b8ad98",
-  fontSize: "0.84rem"
-};

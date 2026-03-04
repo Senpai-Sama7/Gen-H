@@ -12,6 +12,7 @@ export interface InquiryRecord {
   goals: string;
   createdAt: string;
   status: InquiryStatus;
+  notes: string;
 }
 
 export interface InquiryInput {
@@ -23,4 +24,9 @@ export interface InquiryInput {
   budgetBand: string;
   launchWindow: string;
   goals: string;
+}
+
+export interface InquiryUpdateInput {
+  status: InquiryStatus;
+  notes: string;
 }

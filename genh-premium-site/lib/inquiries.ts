@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { Redis } from "@upstash/redis";
 
-import type { InquiryInput, InquiryRecord } from "@/lib/types";
+import type { InquiryInput, InquiryRecord, InquiryUpdateInput } from "@/lib/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "inquiries.json");
@@ -19,6 +19,14 @@ function getRedisClient() {
   }
 
   return new Redis({ url, token });
+}
+
+function normalizeRecord(record: InquiryRecord): InquiryRecord {
+  return {
+    ...record,
+    status: record.status ?? "new",
+    notes: record.notes ?? ""
+  };
 }
 
 export function getStorageMode(): StorageMode {
@@ -47,7 +55,7 @@ async function readLocalInquiries(): Promise<InquiryRecord[]> {
   await ensureLocalStore();
   const raw = await fs.readFile(DATA_FILE, "utf8");
   const parsed = JSON.parse(raw) as InquiryRecord[];
-  return parsed.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return parsed.map(normalizeRecord).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 async function writeLocalInquiries(records: InquiryRecord[]) {
@@ -57,7 +65,20 @@ async function writeLocalInquiries(records: InquiryRecord[]) {
 
 async function readRedisInquiries(client: Redis): Promise<InquiryRecord[]> {
   const values = (await client.lrange<InquiryRecord>(REDIS_KEY, 0, 199)) ?? [];
-  return values.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return values.map(normalizeRecord).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+async function writeRedisInquiries(client: Redis, records: InquiryRecord[]) {
+  await client.del(REDIS_KEY);
+
+  if (records.length === 0) {
+    return;
+  }
+
+  await client.rpush(
+    REDIS_KEY,
+    ...records.map((record) => JSON.parse(JSON.stringify(record)))
+  );
 }
 
 export async function listInquiries(limit = 6): Promise<InquiryRecord[]> {
@@ -79,6 +100,7 @@ export async function createInquiry(payload: InquiryInput): Promise<InquiryRecor
     id: crypto.randomUUID(),
     status: "new",
     createdAt: new Date().toISOString(),
+    notes: "",
     ...payload
   };
 
@@ -113,4 +135,48 @@ export async function getInquiryDashboard() {
     }).length,
     latest: records
   };
+}
+
+export async function updateInquiry(id: string, payload: InquiryUpdateInput): Promise<InquiryRecord | null> {
+  const client = getRedisClient();
+
+  if (client) {
+    const current = await readRedisInquiries(client);
+    const index = current.findIndex((record) => record.id === id);
+
+    if (index === -1) {
+      return null;
+    }
+
+    const updated = {
+      ...current[index],
+      status: payload.status,
+      notes: payload.notes
+    };
+
+    current[index] = updated;
+    await writeRedisInquiries(client, current);
+    return updated;
+  }
+
+  if (getStorageMode() === "unconfigured") {
+    return null;
+  }
+
+  const current = await readLocalInquiries();
+  const index = current.findIndex((record) => record.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const updated = {
+    ...current[index],
+    status: payload.status,
+    notes: payload.notes
+  };
+
+  current[index] = updated;
+  await writeLocalInquiries(current);
+  return updated;
 }

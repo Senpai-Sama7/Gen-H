@@ -19,6 +19,7 @@ type SubmissionState = {
   status: "idle" | "loading" | "success" | "error";
   message?: string;
   record?: InquiryRecord;
+  detail?: string;
 };
 
 const initialState: FormState = {
@@ -50,7 +51,8 @@ export function ContactForm() {
     setSubmission({ status: "loading" });
 
     try {
-      const response = await fetch("/api/inquiries", {
+      const endpoint = new URL("/api/inquiries", window.location.origin).toString();
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -67,7 +69,8 @@ export function ContactForm() {
       setSubmission({
         status: "success",
         message: payload.message,
-        record: payload.record
+        record: payload.record,
+        detail: payload.notification?.detail
       });
       setForm(initialState);
     } catch (error) {
@@ -157,6 +160,7 @@ export function ContactForm() {
         <div className={`submission-banner ${submission.status}`}>
           <strong>{submission.status === "success" ? "Inquiry confirmed" : "Submission blocked"}</strong>
           <span>{submission.message}</span>
+          {submission.detail ? <span>{submission.detail}</span> : null}
           {submission.record ? <span>Reference #{submission.record.id.slice(0, 8).toUpperCase()}</span> : null}
         </div>
       ) : null}

@@ -29,6 +29,8 @@ Open `http://localhost:3000`.
    - `KV_REST_API_TOKEN`
    - `OPS_BASIC_USER`
    - `OPS_BASIC_PASS`
+   - `RESEND_API_KEY` (recommended)
+   - `ALERT_EMAIL` (recommended)
    - `NEXT_PUBLIC_SITE_URL`
    - `COMPANY_PHONE` (optional)
    - `COMPANY_EMAIL` (optional)
@@ -41,7 +43,14 @@ Without Vercel KV, the frontend still renders, but inquiry submissions are block
 - Visit `/ops`
 - The route uses HTTP Basic Auth with `OPS_BASIC_USER` and `OPS_BASIC_PASS`
 - `GET /api/inquiries` is protected by the same credentials
+- `PATCH /api/inquiries/:id` is protected by the same credentials
 - `POST /api/inquiries` remains public so the homepage intake form continues to work
+- Operators can update lead status (`new`, `qualified`, `booked`) and attach notes directly from `/ops`
+
+## Email notifications
+
+- If `RESEND_API_KEY` and `ALERT_EMAIL` are configured, every new inquiry triggers an email notification
+- If those variables are missing, inquiry capture still succeeds and the UI reports that notifications are skipped
 
 ## API contracts
 

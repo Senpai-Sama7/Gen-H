@@ -20,7 +20,11 @@ function isProtectedRequest(request: NextRequest) {
     return true;
   }
 
-  return pathname === "/api/inquiries" && request.method === "GET";
+  if (pathname === "/api/inquiries") {
+    return request.method === "GET";
+  }
+
+  return pathname.startsWith("/api/inquiries/");
 }
 
 export function middleware(request: NextRequest) {
@@ -61,5 +65,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/ops/:path*", "/api/inquiries"]
+  matcher: ["/ops/:path*", "/api/inquiries/:path*"]
 };

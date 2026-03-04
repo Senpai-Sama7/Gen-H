@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createInquiry, getStorageMode, listInquiries } from "@/lib/inquiries";
+import { notifyNewInquiry } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +45,17 @@ export async function POST(request: Request) {
 
   try {
     const record = await createInquiry(parsed.data);
+    const notification = await notifyNewInquiry(record).catch((error) => ({
+      status: "failed" as const,
+      detail: error instanceof Error ? error.message : "Unexpected notification failure."
+    }));
 
     return NextResponse.json(
       {
         success: true,
         storage: getStorageMode(),
         record,
+        notification,
         message: "Inquiry received. A strategist will reply within one business day."
       },
       { status: 201 }
