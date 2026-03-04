@@ -1,10 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import useLenis from './hooks/useLenis';
 import { siteConfig } from './config';
+import { AuthProvider } from './contexts/AuthContext';
 
-// Sections
+// Lazy load admin components for code splitting
+const AdminLogin = lazy(() => import('./sections/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./sections/admin/AdminDashboard'));
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
+
+// Main sections
 import Hero from './sections/Hero';
 import NarrativeText from './sections/NarrativeText';
 import CardStack from './sections/CardStack';
@@ -14,7 +21,17 @@ import Footer from './sections/Footer';
 
 gsap.registerPlugin(ScrollTrigger);
 
-function App() {
+// Loading fallback for admin routes
+function AdminLoading() {
+  return (
+    <div className="min-h-screen bg-genh-black flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-genh-gold border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
+// Main website component
+function MainWebsite() {
   const mainRef = useRef<HTMLDivElement>(null);
   const snapTriggerRef = useRef<ScrollTrigger | null>(null);
   
@@ -22,14 +39,12 @@ function App() {
   useLenis();
 
   useEffect(() => {
-    // Set document language if configured
     if (siteConfig.language) {
       document.documentElement.lang = siteConfig.language;
     }
 
-    // Wait for all sections to mount and create their ScrollTriggers
+    // Setup global snap for pinned sections
     const setupSnap = () => {
-      // Small delay to ensure all ScrollTriggers are created
       setTimeout(() => {
         const pinned = ScrollTrigger.getAll()
           .filter(st => st.vars.pin)
@@ -39,26 +54,21 @@ function App() {
         
         if (!maxScroll || pinned.length === 0) return;
 
-        // Build ranges and snap targets from pinned sections
         const pinnedRanges = pinned.map(st => ({
           start: st.start / maxScroll,
           end: (st.end ?? st.start) / maxScroll,
           center: (st.start + ((st.end ?? st.start) - st.start) * 0.5) / maxScroll,
         }));
 
-        // Create global snap ScrollTrigger
         snapTriggerRef.current = ScrollTrigger.create({
           snap: {
             snapTo: (value: number) => {
-              // Check if within any pinned range (with small buffer)
               const inPinned = pinnedRanges.some(
                 r => value >= r.start - 0.02 && value <= r.end + 0.02
               );
               
-              // If not in a pinned section, allow free scroll
               if (!inPinned) return value;
 
-              // Find nearest pinned center
               const target = pinnedRanges.reduce((closest, r) =>
                 Math.abs(r.center - value) < Math.abs(closest - value) 
                   ? r.center 
@@ -76,15 +86,12 @@ function App() {
       }, 100);
     };
 
-    // Setup snap after content loads
     const handleLoad = () => {
       ScrollTrigger.refresh();
       setupSnap();
     };
 
     window.addEventListener('load', handleLoad);
-    
-    // Also setup after a short delay
     const setupTimeout = setTimeout(setupSnap, 500);
 
     return () => {
@@ -98,27 +105,50 @@ function App() {
 
   return (
     <div ref={mainRef} className="relative bg-genh-black">
-      {/* Noise overlay for premium texture */}
       <div className="noise-overlay" aria-hidden="true" />
-      
-      {/* Hero Section */}
       <Hero />
-
-      {/* Narrative Text Section */}
       <NarrativeText />
-
-      {/* Card Stack Parallax Gallery - PINNED */}
       <CardStack />
-
-      {/* BREATH Video Mask Section */}
       <BreathSection />
-
-      {/* Zig-Zag Grid Section */}
       <ZigZagGrid />
-
-      {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Main Website */}
+          <Route path="/" element={<MainWebsite />} />
+          
+          {/* Admin Routes */}
+          <Route 
+            path="/admin/login" 
+            element={
+              <Suspense fallback={<AdminLoading />}>
+                <AdminLogin />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <Suspense fallback={<AdminLoading />}>
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              </Suspense>
+            } 
+          />
+          
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
