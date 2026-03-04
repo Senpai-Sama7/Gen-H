@@ -17,3 +17,5 @@ hvac-lead-generator/dashboard/node_modules/
 hvac-lead-generator/dashboard/.env.local
 .logs/
 .pids
+.vercel
+.env*.local
