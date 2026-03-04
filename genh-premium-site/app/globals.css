@@ -277,7 +277,7 @@ h3 {
 }
 
 .status-pill.local-dev,
-.status-pill.vercel-kv {
+.status-pill.vercel-blob {
   background: rgba(140, 217, 175, 0.1);
   color: var(--success);
 }

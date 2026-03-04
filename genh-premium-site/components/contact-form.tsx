@@ -153,7 +153,7 @@ export function ContactForm() {
         <button className="primary-button" type="submit" disabled={!canSubmit || submission.status === "loading"}>
           {submission.status === "loading" ? "Submitting strategic brief..." : "Book a strategy session"}
         </button>
-        <p className="form-footnote">Deployed on Vercel. Inquiries persist to Vercel KV in production, or to local storage during development.</p>
+        <p className="form-footnote">Deployed on Vercel. Inquiries persist to Vercel Blob in production, or to local storage during development.</p>
       </div>
 
       {submission.status !== "idle" ? (

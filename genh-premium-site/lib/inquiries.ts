@@ -1,24 +1,29 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { Redis } from "@upstash/redis";
+import { get as getBlob, put } from "@vercel/blob";
 
 import type { InquiryInput, InquiryRecord, InquiryUpdateInput } from "@/lib/types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "inquiries.json");
-const REDIS_KEY = "genh:inquiries";
+const BLOB_PATHNAME = "genh-premium-site/inquiries.json";
 
-type StorageMode = "vercel-kv" | "local-dev" | "unconfigured";
+type StorageMode = "vercel-blob" | "local-dev" | "unconfigured";
 
-function getRedisClient() {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+function hasBlobStore() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
 
-  if (!url || !token) {
-    return null;
+export function getStorageMode(): StorageMode {
+  if (hasBlobStore()) {
+    return "vercel-blob";
   }
 
-  return new Redis({ url, token });
+  if (process.env.VERCEL) {
+    return "unconfigured";
+  }
+
+  return "local-dev";
 }
 
 function normalizeRecord(record: InquiryRecord): InquiryRecord {
@@ -27,18 +32,6 @@ function normalizeRecord(record: InquiryRecord): InquiryRecord {
     status: record.status ?? "new",
     notes: record.notes ?? ""
   };
-}
-
-export function getStorageMode(): StorageMode {
-  if (getRedisClient()) {
-    return "vercel-kv";
-  }
-
-  if (process.env.VERCEL) {
-    return "unconfigured";
-  }
-
-  return "local-dev";
 }
 
 async function ensureLocalStore() {
@@ -63,36 +56,54 @@ async function writeLocalInquiries(records: InquiryRecord[]) {
   await fs.writeFile(DATA_FILE, JSON.stringify(records, null, 2), "utf8");
 }
 
-async function readRedisInquiries(client: Redis): Promise<InquiryRecord[]> {
-  const values = (await client.lrange<InquiryRecord>(REDIS_KEY, 0, 199)) ?? [];
-  return values.map(normalizeRecord).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
+async function readBlobInquiries(): Promise<InquiryRecord[]> {
+  const blob = await getBlob(BLOB_PATHNAME, { access: "private" });
 
-async function writeRedisInquiries(client: Redis, records: InquiryRecord[]) {
-  await client.del(REDIS_KEY);
-
-  if (records.length === 0) {
-    return;
+  if (!blob || blob.statusCode !== 200 || !blob.stream) {
+    return [];
   }
 
-  await client.rpush(
-    REDIS_KEY,
-    ...records.map((record) => JSON.parse(JSON.stringify(record)))
-  );
+  const raw = await new Response(blob.stream).text();
+  const parsed = JSON.parse(raw) as InquiryRecord[];
+  return parsed.map(normalizeRecord).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function listInquiries(limit = 6): Promise<InquiryRecord[]> {
-  const client = getRedisClient();
+async function writeBlobInquiries(records: InquiryRecord[]) {
+  await put(BLOB_PATHNAME, JSON.stringify(records, null, 2), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    contentType: "application/json"
+  });
+}
 
-  if (client) {
-    return (await readRedisInquiries(client)).slice(0, limit);
+async function readAllInquiries(): Promise<InquiryRecord[]> {
+  if (hasBlobStore()) {
+    return readBlobInquiries();
   }
 
   if (getStorageMode() === "unconfigured") {
     return [];
   }
 
-  return (await readLocalInquiries()).slice(0, limit);
+  return readLocalInquiries();
+}
+
+async function writeAllInquiries(records: InquiryRecord[]) {
+  if (hasBlobStore()) {
+    await writeBlobInquiries(records);
+    return;
+  }
+
+  if (getStorageMode() === "unconfigured") {
+    throw new Error("Production storage is not configured. Set BLOB_READ_WRITE_TOKEN before deploying.");
+  }
+
+  await writeLocalInquiries(records);
+}
+
+export async function listInquiries(limit = 6): Promise<InquiryRecord[]> {
+  return (await readAllInquiries()).slice(0, limit);
 }
 
 export async function createInquiry(payload: InquiryInput): Promise<InquiryRecord> {
@@ -104,21 +115,13 @@ export async function createInquiry(payload: InquiryInput): Promise<InquiryRecor
     ...payload
   };
 
-  const client = getRedisClient();
-
-  if (client) {
-    await client.lpush(REDIS_KEY, record);
-    await client.ltrim(REDIS_KEY, 0, 199);
-    return record;
-  }
-
   if (getStorageMode() === "unconfigured") {
-    throw new Error("Production storage is not configured. Set KV_REST_API_URL and KV_REST_API_TOKEN before deploying.");
+    throw new Error("Production storage is not configured. Set BLOB_READ_WRITE_TOKEN before deploying.");
   }
 
-  const current = await readLocalInquiries();
+  const current = await readAllInquiries();
   current.unshift(record);
-  await writeLocalInquiries(current.slice(0, 200));
+  await writeAllInquiries(current.slice(0, 200));
   return record;
 }
 
@@ -138,32 +141,11 @@ export async function getInquiryDashboard() {
 }
 
 export async function updateInquiry(id: string, payload: InquiryUpdateInput): Promise<InquiryRecord | null> {
-  const client = getRedisClient();
-
-  if (client) {
-    const current = await readRedisInquiries(client);
-    const index = current.findIndex((record) => record.id === id);
-
-    if (index === -1) {
-      return null;
-    }
-
-    const updated = {
-      ...current[index],
-      status: payload.status,
-      notes: payload.notes
-    };
-
-    current[index] = updated;
-    await writeRedisInquiries(client, current);
-    return updated;
-  }
-
   if (getStorageMode() === "unconfigured") {
     return null;
   }
 
-  const current = await readLocalInquiries();
+  const current = await readAllInquiries();
   const index = current.findIndex((record) => record.id === id);
 
   if (index === -1) {
@@ -177,6 +159,6 @@ export async function updateInquiry(id: string, payload: InquiryUpdateInput): Pr
   };
 
   current[index] = updated;
-  await writeLocalInquiries(current);
+  await writeAllInquiries(current);
   return updated;
 }

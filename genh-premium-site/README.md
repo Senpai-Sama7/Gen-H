@@ -9,8 +9,9 @@ A Vercel-ready Next.js 14 full-stack marketing site for premium HVAC revenue ope
 - `POST /api/inquiries` with schema validation
 - `GET /api/inquiries` for operational inspection
 - `GET /api/health` for deployment checks
+- `GET /api/readiness` for launch-readiness checks
 - Local JSON persistence for development
-- Vercel KV support for production persistence
+- Vercel Blob support for production persistence
 
 ## Local development
 
@@ -25,8 +26,7 @@ Open `http://localhost:3000`.
 
 1. Import `genh-premium-site` as a new Vercel project.
 2. Add these environment variables:
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
+   - `BLOB_READ_WRITE_TOKEN`
    - `OPS_BASIC_USER`
    - `OPS_BASIC_PASS`
    - `RESEND_API_KEY` (recommended)
@@ -38,7 +38,7 @@ Open `http://localhost:3000`.
 
 The repository also includes `vercel.json` with security headers and a GitHub Actions workflow at `.github/workflows/genh-premium-site.yml` that runs a production build on every push or pull request affecting this app.
 
-Without Vercel KV, the frontend still renders, but inquiry submissions are blocked in production by design.
+Without Vercel Blob, the frontend still renders, but inquiry submissions are blocked in production by design.
 
 ## Protected operator desk
 
