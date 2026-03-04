@@ -1,37 +1,49 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
-
+import { JetBrains_Mono } from "next/font/google";
 import "@/app/globals.css";
+import { SmoothScroll } from "@/app/components/SmoothScroll";
+import { CustomCursor } from "@/app/components/CustomCursor";
 
-const display = Fraunces({
+const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700"]
-});
-
-const body = Manrope({
-  subsets: ["latin"],
-  variable: "--font-body",
-  weight: ["400", "500", "600", "700"]
+  variable: "--font-jetbrains",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3002"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  ),
   title: "GEN-H Studio | Premium HVAC Growth Systems",
   description:
-    "A sleek full-stack site for HVAC growth: clear public positioning, structured lead capture, and a secure admin portal for operators.",
+    "Premium websites that convert. Clear offer. Clear action. HVAC growth systems with integrated lead qualification for high-ticket contractors.",
   openGraph: {
     title: "GEN-H Studio",
     description:
-      "Premium websites and operator-ready lead systems for HVAC companies that need a better buying experience and a clearer pipeline.",
-    type: "website"
-  }
+      "Premium HVAC growth systems with integrated lead qualification.",
+    type: "website",
+  },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${body.variable}`}>{children}</body>
+    <html lang="en" className={jetbrains.variable}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap"
+        />
+      </head>
+      <body className="font-satoshi antialiased">
+        <SmoothScroll>
+          <CustomCursor />
+          {children}
+        </SmoothScroll>
+      </body>
     </html>
   );
 }
