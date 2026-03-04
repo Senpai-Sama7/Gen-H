@@ -228,13 +228,9 @@ export const footerConfig: FooterConfig = {
       platform: "linkedin",
       href: "https://www.linkedin.com/in/douglas-mitchell-the-architect",
     },
-    {
-      platform: "facebook",
-      href: "https://facebook.com/genhstudio",
-    },
   ],
   logoText: "GEN-H",
-  copyright: "© 2025 GEN-H Studio. All rights reserved.",
+  copyright: "© 2026 GEN-H Studio. All rights reserved.",
   links: [
     { label: "Privacy Policy", href: "#" },
     { label: "Terms of Service", href: "#" },
