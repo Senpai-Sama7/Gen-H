@@ -1,21 +1,53 @@
-.extracted/
-hvac-template-library/.env
-hvac-template-library/api-gateway/node_modules/
-hvac-template-library/api-gateway/dist/
-hvac-template-library/cms/.next/
-hvac-template-library/cms/node_modules/
-hvac-template-library/cms/.env.local
-hvac-template-library/shared/node_modules/
-hvac-lead-generator/.env
-hvac-lead-generator/artifacts/
-hvac-lead-generator/__pycache__/
-hvac-lead-generator/.venv/
-hvac-lead-generator/api/node_modules/
-hvac-lead-generator/api/dist/
-hvac-lead-generator/dashboard/.next/
-hvac-lead-generator/dashboard/node_modules/
-hvac-lead-generator/dashboard/.env.local
-.logs/
-.pids
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+.dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Vercel
 .vercel
-.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Project specific
+.extracted/
+.pids
+.logs/
+artifacts/

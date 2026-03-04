@@ -1,433 +1,162 @@
-# Money Monorepo - AI Handoff and Operating Guide
+# GEN-H Studio
 
-This repository contains three distinct systems:
+Premium HVAC growth systems with integrated admin portal. A dark editorial website with sophisticated scroll-driven animations and full backend control capabilities.
 
-1. `genh-premium-site/` - the live public-facing Next.js/Vercel website for GEN-H Studio
-2. `hvac-lead-generator/` - a lead-generation platform (Python + API + dashboard)
-3. `hvac-template-library/` - an HVAC template/CMS platform (Next.js + Express + Docker)
+## Features
 
-This document is the top-level handoff. It is written so another engineer or AI agent can enter the repo, understand the architecture, avoid the known traps, and continue work without rediscovering context.
+### Customer-Facing Website
+- **Hero Section** - Full-viewport with Ken Burns background, parallax scrolling
+- **Narrative Text** - Scroll-triggered text reveal with animated gold star
+- **Card Stack** - Pinned scroll-driven card gallery (Attract → Qualify → Convert)
+- **Breath Section** - Cinematic image banner with scale-up animation
+- **ZigZag Grid** - Alternating image/text layout (Clarify → Capture → Run → Optimize)
+- **Footer** - Dark footer with magnetic button effect
 
-## Current Source of Truth
+### Admin Portal
+- **Secure Login** - API key authentication with local storage
+- **Dashboard Metrics** - Total dispatches, pending, completed, emergency percentages
+- **Dispatch List** - Real-time view of all service requests
+- **Auto-Refresh** - Dashboard updates every 30 seconds
+- **Status Tracking** - View customer info, issues, urgency levels
 
-The primary active production app is:
+## Design System
 
-- `genh-premium-site/`
+- **Background**: #0B0C0E (near-black)
+- **Accent**: #D7A04D (warm gold) - CTAs and labels only
+- **Text Primary**: #F4F6F8 (off-white)
+- **Text Secondary**: #A6ACB2 (cool gray)
+- **Typography**: Montserrat 700-900 (display, ALL CAPS) + Inter 400-500 (body)
 
-The current public domain is:
+## Tech Stack
 
-- `https://gen-h.vercel.app`
+- React 19 + TypeScript
+- React Router 6 (navigation)
+- Vite (build tool)
+- Tailwind CSS 3
+- GSAP (ScrollTrigger) for animations
+- Lenis for smooth scrolling
 
-The root of the repo also matters in production:
-
-- `vercel.json` at the repo root is a deliberate safety shim
-- it rewrites all traffic for the separate Vercel project `gen-h` to `https://genh-premium-site.vercel.app`
-
-Do not remove `vercel.json` unless the Vercel project named `gen-h` is reconfigured to build `genh-premium-site/` directly. Without that file, `gen-h.vercel.app` can revert to a 404 when the wrong Vercel project auto-deploys.
-
-## Repository Layout
-
-### Active production website
-
-- `genh-premium-site/`
-  - `app/` - Next.js App Router routes
-  - `components/` - reusable UI components
-  - `lib/` - auth, storage, notifications, shared types
-  - `data/` - local dev JSON storage fallback
-  - `.env.example` - required runtime variables
-  - `README.md` - app-specific deployment notes
-
-### HVAC lead generation platform
-
-- `hvac-lead-generator/`
-  - `lead_generator.py` - Composio-backed lead generation CLI
-  - `api/` - API wrapper around the generator and artifact history
-  - `dashboard/` - Next.js operator dashboard
-  - `artifacts/` - JSON run outputs
-  - `.venv/` - Python virtual environment
-
-### HVAC template platform
-
-- `hvac-template-library/`
-  - `api-gateway/` - Express API
-  - `cms/` - Next.js CMS
-  - `shared/` - shared React components
-  - `database/` - schema
-  - `docker/` - Docker Compose stack
-  - `docs/` - supporting docs
-
-### Root-level operational files
-
-- `vercel.json` - root Vercel rewrite shim for the `gen-h` project
-- `start-all.sh` - convenience local startup script for HVAC systems
-- `stop-all.sh` - convenience local shutdown script for HVAC systems
-- `.github/workflows/genh-premium-site.yml` - CI build for the premium site
-
-## System 1: GEN-H Premium Site
-
-### Purpose
-
-`genh-premium-site/` is a full-stack marketing and lead-intake website for GEN-H Studio:
-
-- public landing page
-- public inquiry submission form
-- protected admin portal at `/portal`
-- protected admin dashboard at `/portal/dashboard`
-- inquiry persistence
-- operator notes and status management
-
-### Live behavior
-
-Public:
-
-- `GET /` - renders the main marketing site
-- `POST /api/inquiries` - creates a new inquiry
-- `GET /api/health` - health summary
-- `GET /api/readiness` - deployment readiness summary
-
-Protected:
-
-- `GET /portal` - login screen
-- `GET /portal/dashboard` - admin dashboard (requires login session)
-- `GET /api/inquiries` - query inquiries (requires session)
-- `PATCH /api/inquiries/:id` - update inquiry status/notes (requires session)
-- `GET /ops` - legacy path, redirects to `/portal/dashboard`
-
-### Runtime architecture
-
-- Framework: Next.js App Router
-- Frontend: React + TSX
-- Storage:
-  - local development: JSON file under `genh-premium-site/data/inquiries.json`
-  - production: Vercel Blob snapshots via `@vercel/blob`
-- Auth:
-  - session-cookie login portal
-  - middleware-protected admin routes and admin APIs
-- Optional notifications:
-  - Resend email notifications on new inquiry
-
-### Critical implementation details
-
-#### Root Vercel deployment workaround
-
-There are two Vercel projects:
-
-- `genh-premium-site` - the real app project
-- `gen-h` - a separate project that historically deployed the repo root incorrectly
-
-The fix that currently keeps the live domain stable is:
-
-- root `vercel.json` rewrites every request from `gen-h` to `genh-premium-site.vercel.app`
-
-This is not decorative. It is currently the guardrail preventing the public domain from flipping back to 404 after repo pushes.
-
-#### Auth model
-
-Portal login uses:
-
-- `OPS_BASIC_USER`
-- `OPS_BASIC_PASS`
-- optional `OPS_SESSION_SECRET`
-
-Implementation is in:
-
-- `genh-premium-site/lib/auth.ts`
-
-Current limitation:
-
-- session tokens are deterministic hashes, not fully signed expiring server-validated sessions
-- this works, but it is weaker than a proper JWT or signed timestamped cookie
-
-If security hardening continues, this is one of the first code paths to replace.
-
-#### Storage model
-
-Production writes immutable snapshot objects to Vercel Blob.
-
-This means:
-
-- writes return a `snapshotPath`
-- some admin flows should prefer exact-snapshot reads for consistency
-- the operator desk is designed around this model
-
-### Required environment variables for production
-
-Core:
-
-- `BLOB_READ_WRITE_TOKEN`
-- `INQUIRY_BLOB_PATH`
-- `OPS_BASIC_USER`
-- `OPS_BASIC_PASS`
-- `OPS_SESSION_SECRET`
-- `NEXT_PUBLIC_SITE_URL`
-
-Optional but recommended:
-
-- `RESEND_API_KEY`
-- `ALERT_EMAIL`
-- `FROM_EMAIL`
-- `COMPANY_PHONE`
-- `COMPANY_EMAIL`
-
-### Known gaps / technical debt
-
-- Public inquiry endpoint has no rate limiting or bot protection
-- Session cookies should be upgraded to signed expiring sessions
-- `launchReady` may be more permissive than some operators want because alerts are optional
-- Notifications are skipped if Resend is not configured
-
-### Local development
+## Quick Start
 
 ```bash
-cd genh-premium-site
 npm install
 npm run dev
 ```
 
-For a production-style local check:
+## Configuration
+
+Create a `.env` file from `.env.example`:
 
 ```bash
-cd genh-premium-site
-npm run build
-npm run start
+cp .env.example .env
 ```
 
-### High-signal files
+### Environment Variables
 
-- `genh-premium-site/app/page.tsx` - public landing page
-- `genh-premium-site/app/portal/page.tsx` - login route
-- `genh-premium-site/app/portal/dashboard/page.tsx` - admin dashboard route
-- `genh-premium-site/components/ops-desk.tsx` - admin workspace UI
-- `genh-premium-site/components/contact-form.tsx` - inquiry intake form
-- `genh-premium-site/components/revenue-visualizer.tsx` - interactive visual element
-- `genh-premium-site/app/api/inquiries/route.ts` - create/list inquiries
-- `genh-premium-site/app/api/inquiries/[id]/route.ts` - update inquiry
-- `genh-premium-site/app/api/readiness/route.ts` - deployment readiness API
-- `genh-premium-site/app/api/health/route.ts` - health API
-- `genh-premium-site/lib/inquiries.ts` - persistence layer
-- `genh-premium-site/lib/auth.ts` - session helpers
-- `genh-premium-site/middleware.ts` - route protection
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VITE_API_BASE_URL` | Backend API URL | `http://localhost:8000` |
+| `VITE_ENABLE_ADMIN` | Enable admin features | `true` |
 
-## System 2: HVAC Lead Generator
+## Deployment
 
-### Purpose
+### Vercel (Recommended)
 
-`hvac-lead-generator/` finds HVAC leads, writes run artifacts, supports preview/export modes, and exposes a non-technical dashboard around the generator.
+1. Push your code to GitHub
+2. Import repository on [Vercel](https://vercel.com)
+3. Add environment variables in Vercel dashboard
+4. Deploy!
 
-### Main components
+**Build Settings:**
+- Framework: Vite
+- Build Command: `npm run build`
+- Output Directory: `dist`
 
-- `lead_generator.py` - primary CLI
-- `api/server.ts` - backend wrapper for generator execution, artifacts, readiness, history, and CRM promotion
-- `dashboard/pages/index.tsx` - operator UI
+### Connecting to Backend
 
-### Runtime capabilities
+1. Deploy the backend API (see main system repo)
+2. Set `VITE_API_BASE_URL` to your API URL
+3. Ensure backend CORS allows your frontend domain
+4. Use your `DISPATCH_API_KEY` to log into admin portal
 
-CLI modes:
+## Admin Portal Usage
 
-- default run - generate + export
-- `--profile-locations` - scan locations and show qualified count
-- `--dry-run` - find leads without writing to the sheet
-- `--output-json <path>` - persist the current run artifact
+### Accessing Admin Dashboard
 
-Operational features already implemented:
+1. Navigate to `/admin/login`
+2. Enter your API key (same as backend `DISPATCH_API_KEY`)
+3. View and manage dispatches in real-time
 
-- retry/backoff around Composio action execution
-- JSON artifact generation
-- artifact history
-- download audit JSON
-- promote artifact into CRM
-- duplicate-promotion protection
-- run-history filters and sort
-- production readiness panel
-- execution preflight guard
+### Features
 
-### Dependencies
+- **Metrics Cards**: Overview of dispatch statistics
+- **Dispatch Table**: Sortable list with customer info, status, urgency
+- **Auto-Refresh**: Data refreshes every 30 seconds
+- **Logout**: Securely clear session
 
-- Python runtime from `.venv`
-- Composio account + valid `COMPOSIO_API_KEY`
-- `COMPOSIO_ENTITY_ID`
-- active connected apps:
-  - `google_maps`
-  - `googlesheets`
+## API Integration
 
-### Required environment
+The frontend connects to the main HVAC dispatch system:
 
-See:
-
-- `hvac-lead-generator/.env.example`
-
-Core values include:
-
-- `COMPOSIO_API_KEY`
-- `COMPOSIO_ENTITY_ID`
-- `target_locations`
-- `min_rating`
-- `min_review_count`
-- `results_per_location`
-- `google_sheet_id`
-- `LEAD_API_PORT`
-- `LEAD_DATABASE_URL`
-
-### Database behavior
-
-- uses the shared Postgres instance
-- campaign records go to `lead_campaigns`
-- promoted leads go to `leads`
-- API startup applies compatibility migrations for duplicate-promotion safety
-
-### Important notes
-
-- The system has been validated with live Composio + Google Sheets writes
-- Artifacts are stored under `hvac-lead-generator/artifacts/`
-- The dashboard is designed for non-technical operators and already exposes:
-  - config
-  - profile
-  - preview
-  - generate/export
-  - history
-  - download
-  - promote
-  - readiness
-  - CRM panel
-
-### High-signal files
-
-- `hvac-lead-generator/lead_generator.py`
-- `hvac-lead-generator/api/server.ts`
-- `hvac-lead-generator/dashboard/pages/index.tsx`
-- `hvac-lead-generator/.env.example`
-- `hvac-lead-generator/requirements.txt`
-
-## System 3: HVAC Template Library
-
-### Purpose
-
-`hvac-template-library/` is a full-stack template/CMS system for deploying HVAC company websites from prebuilt templates.
-
-### Main components
-
-- `api-gateway/` - Express API
-- `cms/` - Next.js management UI
-- `shared/` - reusable components
-- `database/schema.sql` - template and lead schemas
-- `docker/docker-compose.yml` - local stack
-
-### Local services
-
-- CMS: `http://localhost:3000`
-- API: `http://localhost:5000`
-- Postgres: `localhost:5432`
-- Redis: `localhost:6379`
-
-### High-signal files
-
-- `hvac-template-library/database/schema.sql`
-- `hvac-template-library/api-gateway/server.ts`
-- `hvac-template-library/cms/pages/index.tsx`
-- `hvac-template-library/shared/components/index.ts`
-- `hvac-template-library/docker/docker-compose.yml`
-
-## Local Development Workflows
-
-### HVAC systems startup
-
-```bash
-./start-all.sh
+```typescript
+// API Service endpoints
+GET  /health           - Health check
+GET  /dispatches       - List recent dispatches
+GET  /run/{id}         - Get dispatch status
+POST /dispatch         - Create new dispatch
+POST /login            - Admin login (form data)
+GET  /logout           - Admin logout
 ```
 
-This is for the HVAC systems (`hvac-template-library` and `hvac-lead-generator`), not the Vercel site.
+## Project Structure
 
-Shutdown:
-
-```bash
-./stop-all.sh
+```
+src/
+├── components/
+│   └── ProtectedRoute.tsx    # Auth guard component
+├── config/
+│   ├── env.ts                # Environment variables
+│   └── site.ts               # Site configuration
+├── contexts/
+│   └── AuthContext.tsx       # Authentication state
+├── sections/
+│   ├── admin/
+│   │   ├── AdminLogin.tsx    # Admin login page
+│   │   └── AdminDashboard.tsx # Admin dashboard
+│   ├── Hero.tsx
+│   ├── NarrativeText.tsx
+│   ├── CardStack.tsx
+│   ├── BreathSection.tsx
+│   ├── ZigZagGrid.tsx
+│   └── Footer.tsx
+├── services/
+│   └── api.ts                # API client
+└── App.tsx                   # Main router
 ```
 
-### GEN-H site local startup
+## Required Images
 
-```bash
-cd genh-premium-site
-npm install
-npm run dev
-```
+Place images in `public/`:
 
-### CI
+| File | Description |
+|------|-------------|
+| `hero-bg.jpg` | Modern minimalist interior |
+| `breath-bg.jpg` | HVAC control room |
+| `card-1.jpg` | Premium website on laptop |
+| `card-2.jpg` | Lead qualification form |
+| `card-3.jpg` | Admin portal dashboard |
+| `grid-1.jpg` | Team collaboration |
+| `grid-2.jpg` | Professional reviewing docs |
+| `grid-3.jpg` | HVAC technician with tablet |
+| `grid-4.jpg` | Executive reviewing analytics |
 
-Current CI only covers the premium site build:
+## Security
 
-- `.github/workflows/genh-premium-site.yml`
+- API keys stored in localStorage (cleared on logout)
+- Protected routes require authentication
+- CORS credentials enabled for session cookies
+- Security headers on all requests
 
-## Deployment Notes
+## License
 
-### GEN-H production deployment
-
-There are two deployment layers:
-
-1. `genh-premium-site` Vercel project - the real app
-2. `gen-h` Vercel project - root proxy safety layer
-
-The current stable setup is:
-
-- `genh-premium-site` hosts the app
-- repo root `vercel.json` rewrites all `gen-h` traffic to that app
-
-This means future repo pushes should not break `https://gen-h.vercel.app`, even if the `gen-h` project continues to build the repo root.
-
-### If the live site breaks again
-
-Check these first:
-
-1. `curl -I https://gen-h.vercel.app/`
-2. `curl -s https://gen-h.vercel.app/api/health`
-3. `npx vercel inspect gen-h.vercel.app`
-4. `npx vercel inspect genh-premium-site.vercel.app`
-
-If `gen-h` is returning 404 again, likely causes are:
-
-- root `vercel.json` was removed or changed
-- the `genh-premium-site` project is down
-- the external rewrite target changed
-
-### Manual recovery path
-
-If needed, redeploy the root project:
-
-```bash
-npx vercel link --project gen-h --yes --scope senpai-sama7s-projects
-npx vercel deploy --prod --yes --scope senpai-sama7s-projects --logs
-```
-
-This deploys the root rewrite shim, which should restore `gen-h.vercel.app`.
-
-## Security / Operational Warnings
-
-- Never commit real secrets
-- `.vercel` and local env files are intentionally ignored
-- Public intake endpoints are internet-facing and currently not throttled
-- Admin auth works but should be hardened further if the app will handle sensitive data
-- Vercel Blob is the production data store; if the token is removed, the site will still render but intake persistence can fail or block depending on route logic
-
-## Recommended Next Hardening Tasks
-
-These are the highest-value remaining improvements:
-
-1. Replace deterministic portal session cookies with signed expiring sessions
-2. Add rate limiting / bot protection to `POST /api/inquiries`
-3. Add production analytics and error monitoring
-4. Add role-based settings UI inside the portal
-5. Add stronger backup/export tooling for inquiry data
-
-## For the Next AI Agent
-
-If you are continuing work, use this order:
-
-1. Treat `genh-premium-site/` as the primary active product
-2. Preserve root `vercel.json` unless you explicitly replace the root-project deployment model
-3. Verify the live site first:
-   - `https://gen-h.vercel.app`
-   - `https://gen-h.vercel.app/api/health`
-4. Then verify local build:
-   - `cd genh-premium-site && npm run build`
-5. Only after that, make changes
-
-If a deployment issue appears, do not assume the app is broken. Check whether the separate `gen-h` root Vercel project is the actual cause before changing application code.
+© 2025 GEN-H Studio. All rights reserved.
