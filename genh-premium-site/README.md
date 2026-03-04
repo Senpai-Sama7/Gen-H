@@ -1,11 +1,12 @@
 # GEN-H Premium Site
 
-A Vercel-ready Next.js 14 full-stack marketing site for premium HVAC revenue operations.
+A Vercel-ready Next.js full-stack marketing site for premium HVAC growth systems.
 
 ## What is included
 
 - Editorial-grade premium TSX frontend
 - Server-rendered inquiry dashboard on the homepage
+- Login-based admin portal at `/portal`
 - `POST /api/inquiries` with schema validation
 - `GET /api/inquiries` for operational inspection
 - `GET /api/health` for deployment checks
@@ -30,6 +31,7 @@ Open `http://localhost:3000`.
    - `INQUIRY_BLOB_PATH` (recommended so the Blob snapshot prefix is not guessable)
    - `OPS_BASIC_USER`
    - `OPS_BASIC_PASS`
+   - `OPS_SESSION_SECRET` (recommended so portal sessions are independent of the raw login password)
    - `RESEND_API_KEY` (recommended)
    - `ALERT_EMAIL` (recommended)
    - `NEXT_PUBLIC_SITE_URL`
@@ -41,14 +43,15 @@ The repository also includes `vercel.json` with security headers and a GitHub Ac
 
 Without Vercel Blob, the frontend still renders, but inquiry submissions are blocked in production by design. For Vercel Blob, this app writes immutable JSON snapshots under a single prefix and reads the latest snapshot, so use a randomized `INQUIRY_BLOB_PATH` value in production.
 
-## Protected operator desk
+## Admin portal
 
-- Visit `/ops`
-- The route uses HTTP Basic Auth with `OPS_BASIC_USER` and `OPS_BASIC_PASS`
-- `GET /api/inquiries` is protected by the same credentials
-- `PATCH /api/inquiries/:id` is protected by the same credentials
+- Visit `/portal` to sign in
+- Successful login creates a secure session cookie and redirects to `/portal/dashboard`
+- `/ops` now redirects to `/portal/dashboard`
+- `GET /api/inquiries` requires a valid portal session
+- `PATCH /api/inquiries/:id` requires a valid portal session
 - `POST /api/inquiries` remains public so the homepage intake form continues to work
-- Operators can update lead status (`new`, `qualified`, `booked`) and attach notes directly from `/ops`
+- Operators can update lead status (`new`, `qualified`, `booked`) and attach notes directly from the dashboard
 
 ## Email notifications
 

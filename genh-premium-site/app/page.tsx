@@ -1,46 +1,37 @@
 import { ContactForm } from "@/components/contact-form";
+import { RevenueVisualizer } from "@/components/revenue-visualizer";
 import { getInquiryDashboard } from "@/lib/inquiries";
 
 export const dynamic = "force-dynamic";
 
-const operatingSignals = [
+const workflow = [
   {
-    label: "Signature builds",
-    value: "14 day",
-    detail: "Average launch cycle for premium HVAC operators migrating off fragmented marketing stacks."
+    title: "Clarify the offer",
+    body: "Make the value obvious in seconds so premium buyers understand what is different, what it costs, and why they should trust it."
   },
   {
-    label: "Lead routing latency",
-    value: "< 45 sec",
-    detail: "Inbound calls, form submissions, and campaign alerts are routed into a single revenue workflow."
+    title: "Capture strong leads",
+    body: "Collect intent, budget, timing, and commercial context through one structured brief instead of vague contact requests."
   },
   {
-    label: "Revenue-grade pages",
-    value: "18 modules",
-    detail: "Conversion sections, proof surfaces, financing prompts, and dispatch-aware CTAs."
+    title: "Run the pipeline",
+    body: "Use the private admin portal to review every lead, qualify it, assign next actions, and track what is already booked."
   }
 ];
 
-const signatureServices = [
+const controlPoints = [
   {
-    title: "Revenue architecture",
-    body: "Custom lead flows, dispatch-aware page logic, financing prompts, and trust systems shaped for premium HVAC operators."
+    label: "Clear public experience",
+    detail: "A landing page that explains the offer without forcing visitors to decode jargon or guess what happens next."
   },
   {
-    title: "Offer engineering",
-    body: "Tune maintenance memberships, emergency service offers, install promos, and seasonal demand surges without diluting margin."
+    label: "Interactive signal view",
+    detail: "A visualizer that shows how the funnel moves from first impression to booked work in a way non-technical buyers understand."
   },
   {
-    title: "Executive reporting",
-    body: "Operators see campaign velocity, qualified demand, and close-ready conversations without touching code."
+    label: "Private admin portal",
+    detail: "A login-first dashboard where you control lead statuses, notes, and queue prioritization behind a secure session."
   }
-];
-
-const deliverySequence = [
-  "Strategic revenue audit and market diagnosis",
-  "Messaging and offer stack for residential or commercial lanes",
-  "Full TSX build with server routes, analytics hooks, and conversion QA",
-  "Vercel deployment, launch oversight, and post-launch iteration"
 ];
 
 export default async function HomePage() {
@@ -49,161 +40,135 @@ export default async function HomePage() {
   const email = process.env.COMPANY_EMAIL || "advisors@genh.studio";
 
   return (
-    <main className="site-shell">
-      <div className="ambient ambient-left" />
-      <div className="ambient ambient-right" />
-
-      <header className="top-bar section-frame">
-        <div>
-          <span className="eyebrow">GEN-H STUDIO</span>
-          <span className="top-copy">Premium revenue systems for elite HVAC brands</span>
+    <main className="site-shell landing-shell">
+      <header className="site-nav glass-panel">
+        <div className="brand-lockup">
+          <span className="brand-kicker">GEN-H</span>
+          <span className="brand-copy">Premium HVAC growth systems</span>
         </div>
-        <div className="top-links">
-          <a href={`tel:${phone}`}>{phone}</a>
-          <a href={`mailto:${email}`}>{email}</a>
-        </div>
+        <nav className="nav-links">
+          <a href="#how-it-works">How it works</a>
+          <a href="#strategy-brief">Start brief</a>
+          <a className="secondary-link" href="/portal">
+            Admin login
+          </a>
+        </nav>
       </header>
 
-      <section className="hero section-frame">
-        <div className="hero-copy">
-          <span className="eyebrow">Vercel-native full stack</span>
-          <h1>Luxury-grade websites built to sell, schedule, and scale HVAC demand.</h1>
-          <p className="lead-copy">
-            This is not a template brochure. It is a revenue surface: a premium TSX frontend, server-side inquiry capture,
-            live pipeline visibility, and deployment-ready infrastructure designed for operators who monetize trust.
+      <section className="hero-layout">
+        <div className="hero-main glass-panel">
+          <span className="eyebrow">Clear offer. Clear action.</span>
+          <h1>Premium websites and a real control room for the leads they create.</h1>
+          <p className="hero-lead">
+            This site is built to be obvious for non-technical buyers: a polished public-facing experience that explains the offer,
+            captures the right information, and routes every inquiry into a private admin portal you can actually use.
           </p>
-          <div className="hero-actions">
+          <div className="hero-action-row">
             <a className="primary-button" href="#strategy-brief">
-              Start the strategic brief
+              Start the strategy brief
             </a>
-            <a className="secondary-link" href="#command-center">
-              Inspect the command center
+            <a className="secondary-link" href="/portal">
+              Open admin portal
             </a>
+          </div>
+          <div className="hero-contact-strip">
+            <a href={`tel:${phone}`}>{phone}</a>
+            <span />
+            <a href={`mailto:${email}`}>{email}</a>
           </div>
         </div>
 
-        <div className="hero-panel" id="command-center">
-          <div className="panel-header">
-            <span className="eyebrow">Live operator signal</span>
-            <span className={`status-pill ${dashboard.storage}`}>{dashboard.storage.replace("-", " ")}</span>
-          </div>
-          <div className="dashboard-grid">
-            <div className="metric-card feature-large">
-              <span>Tracked inquiries</span>
-              <strong>{dashboard.totalTracked.toString().padStart(2, "0")}</strong>
-              <p>Visible to the server-rendered homepage and JSON API instantly.</p>
-            </div>
-            <div className="metric-card">
-              <span>This week</span>
-              <strong>{dashboard.thisWeek.toString().padStart(2, "0")}</strong>
-            </div>
-            <div className="metric-card">
-              <span>Stack</span>
-              <strong>Next.js</strong>
-            </div>
-          </div>
-          <div className="pipeline-list">
-            {dashboard.latest.length > 0 ? (
-              dashboard.latest.map((record) => (
-                <article className="pipeline-row" key={record.id}>
-                  <div>
-                    <strong>{record.company}</strong>
-                    <span>{record.projectType}</span>
-                  </div>
-                  <div>
-                    <span>{record.budgetBand}</span>
-                    <span>{new Date(record.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </article>
-              ))
-            ) : (
-              <div className="empty-state">
-                <strong>No inquiries yet.</strong>
-                <span>Submit the form below locally or connect Vercel Blob before launch.</span>
-              </div>
-            )}
-          </div>
+        <div className="hero-side glass-panel">
+          <RevenueVisualizer
+            trackedCount={dashboard.totalTracked}
+            thisWeek={dashboard.thisWeek}
+            latestCompanies={dashboard.latest.map((record) => record.company)}
+          />
         </div>
       </section>
 
-      <section className="signal-band section-frame">
-        {operatingSignals.map((signal) => (
-          <article className="signal-card" key={signal.label}>
-            <span className="eyebrow">{signal.label}</span>
-            <strong>{signal.value}</strong>
-            <p>{signal.detail}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="split-layout section-frame">
-        <div className="section-copy">
-          <span className="eyebrow">What this system covers</span>
-          <h2>A premium front office that turns expensive traffic into booked revenue.</h2>
+      <section className="clarity-section glass-panel" id="how-it-works">
+        <div className="section-heading">
+          <span className="eyebrow">What this does</span>
+          <h2>One public experience, one private workflow, no confusion.</h2>
           <p>
-            Non-technical operators get a refined commercial surface, while the backend remains clean: typed routes, validated
-            server handlers, durable inquiry capture, and a deploy target built for Vercel from day one.
+            The site is designed to be understood quickly. A prospect sees what you offer, submits a structured brief, and your team
+            handles the lead inside a secure admin portal instead of scattered inboxes and disconnected notes.
           </p>
         </div>
-        <div className="service-stack">
-          {signatureServices.map((service, index) => (
-            <article className="service-card" key={service.title}>
+
+        <div className="feature-grid">
+          {workflow.map((item, index) => (
+            <article className="feature-card" key={item.title}>
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <div>
-                <h3>{service.title}</h3>
-                <p>{service.body}</p>
-              </div>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="blueprint section-frame">
-        <div className="section-copy compact">
-          <span className="eyebrow">Delivery sequence</span>
-          <h2>Built for operators who need executive clarity, not engineering babysitting.</h2>
+      <section className="explain-grid">
+        <div className="story-card glass-panel">
+          <span className="eyebrow">Designed for clarity</span>
+          <h2>No abstract agency language. Just a visible system.</h2>
+          <p>
+            The layout is intentionally simple: explain the offer, show the operating model, capture the lead, and give the operator a
+            clean place to act on it.
+          </p>
         </div>
-        <div className="timeline-grid">
-          {deliverySequence.map((step, index) => (
-            <article className="timeline-card" key={step}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <p>{step}</p>
+        <div className="control-grid">
+          {controlPoints.map((point) => (
+            <article className="control-card glass-panel" key={point.label}>
+              <strong>{point.label}</strong>
+              <p>{point.detail}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="brief-section section-frame" id="strategy-brief">
-        <div className="section-copy form-intro">
-          <span className="eyebrow">Strategic intake</span>
-          <h2>Submit a commercial brief and capture it directly in the backend.</h2>
+      <section className="brief-layout" id="strategy-brief">
+        <div className="brief-copy glass-panel">
+          <span className="eyebrow">Start here</span>
+          <h2>Submit one brief. The backend does the rest.</h2>
           <p>
-            The form below is fully wired. Locally it stores into a JSON ledger for testing. In production, the same route persists
-            directly into Vercel Blob without changing the frontend.
+            The form is fully connected to the live backend. In production it writes directly to Vercel Blob and makes the inquiry
+            available to the admin portal immediately.
           </p>
+          <div className="brief-note-grid">
+            <div>
+              <strong>What the form captures</strong>
+              <span>Name, company, contact details, project type, budget, launch timing, and the actual business bottleneck.</span>
+            </div>
+            <div>
+              <strong>What you get after submission</strong>
+              <span>A stored lead, a reference ID, and immediate visibility inside the private dashboard.</span>
+            </div>
+          </div>
         </div>
-        <div className="form-shell">
+
+        <div className="brief-card glass-panel">
           <ContactForm />
         </div>
       </section>
 
-      <section className="footer-cta section-frame">
+      <footer className="site-footer glass-panel">
         <div>
-          <span className="eyebrow">Deployment ready</span>
-          <h2>Ship the same codebase to Vercel and keep the premium polish intact.</h2>
+          <span className="eyebrow">Operating links</span>
+          <h2>Everything important is one click away.</h2>
         </div>
-        <div className="footer-actions">
+        <div className="footer-link-row">
           <a className="secondary-link" href="/api/health">
-            Check API health
+            API health
           </a>
           <a className="secondary-link" href="/api/readiness">
-            Inspect deployment readiness
+            Readiness report
           </a>
-          <a className="primary-button" href="/ops">
-            Open operator desk
+          <a className="primary-button" href="/portal">
+            Admin portal login
           </a>
         </div>
-      </section>
+      </footer>
     </main>
   );
 }

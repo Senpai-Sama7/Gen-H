@@ -1,26 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const AUTH_REALM = 'Basic realm="GEN-H Ops"';
-
-function readEnv(name: string) {
-  return process.env[name]?.trim() ?? "";
-}
-
-function unauthorized(message: string, status = 401) {
-  return new NextResponse(message, {
-    status,
-    headers: {
-      "WWW-Authenticate": AUTH_REALM,
-      "Content-Type": "text/plain; charset=utf-8"
-    }
-  });
-}
+import { SESSION_COOKIE, hasPortalCredentials, isSessionTokenValid } from "@/lib/auth";
 
 function isProtectedRequest(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/ops")) {
+  if (pathname.startsWith("/portal/dashboard") || pathname.startsWith("/ops")) {
     return true;
   }
 
@@ -31,43 +17,55 @@ function isProtectedRequest(request: NextRequest) {
   return pathname.startsWith("/api/inquiries/");
 }
 
-export function middleware(request: NextRequest) {
+function unauthorizedApi(message: string, status = 401) {
+  return NextResponse.json(
+    {
+      success: false,
+      message
+    },
+    { status }
+  );
+}
+
+function redirectToPortal(request: NextRequest, reason?: string) {
+  const next = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const url = new URL("/portal", request.url);
+  url.searchParams.set("next", next);
+  if (reason) {
+    url.searchParams.set("reason", reason);
+  }
+  return NextResponse.redirect(url);
+}
+
+export async function middleware(request: NextRequest) {
   if (!isProtectedRequest(request)) {
     return NextResponse.next();
   }
 
-  const username = readEnv("OPS_BASIC_USER");
-  const password = readEnv("OPS_BASIC_PASS");
+  const isApiRequest = request.nextUrl.pathname.startsWith("/api/");
 
-  if (!username || !password) {
-    return unauthorized("OPS_BASIC_USER and OPS_BASIC_PASS must be configured before protected routes can be used.", 503);
+  if (!hasPortalCredentials()) {
+    if (isApiRequest) {
+      return unauthorizedApi("Portal access is not configured. Set OPS_BASIC_USER and OPS_BASIC_PASS.", 503);
+    }
+
+    return redirectToPortal(request, "unconfigured");
   }
 
-  const authorization = request.headers.get("authorization");
+  const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+  const isAuthenticated = await isSessionTokenValid(sessionToken);
 
-  if (!authorization?.startsWith("Basic ")) {
-    return unauthorized("Authentication required.");
+  if (isAuthenticated) {
+    return NextResponse.next();
   }
 
-  let decoded = "";
-
-  try {
-    decoded = atob(authorization.slice(6));
-  } catch {
-    return unauthorized("Malformed authorization header.");
+  if (isApiRequest) {
+    return unauthorizedApi("Portal session required.");
   }
 
-  const separatorIndex = decoded.indexOf(":");
-  const incomingUser = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : "";
-  const incomingPass = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : "";
-
-  if (incomingUser !== username || incomingPass !== password) {
-    return unauthorized("Invalid credentials.");
-  }
-
-  return NextResponse.next();
+  return redirectToPortal(request, "signin");
 }
 
 export const config = {
-  matcher: ["/ops/:path*", "/api/inquiries/:path*"]
+  matcher: ["/portal/dashboard/:path*", "/ops/:path*", "/api/inquiries/:path*"]
 };

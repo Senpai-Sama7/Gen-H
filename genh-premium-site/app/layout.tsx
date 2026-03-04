@@ -1,29 +1,29 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, IBM_Plex_Sans } from "next/font/google";
+import { Fraunces, Manrope } from "next/font/google";
 
 import "@/app/globals.css";
 
-const display = Cormorant_Garamond({
+const display = Fraunces({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"]
+  weight: ["500", "600", "700"]
 });
 
-const body = IBM_Plex_Sans({
+const body = Manrope({
   subsets: ["latin"],
   variable: "--font-body",
-  weight: ["300", "400", "500", "600", "700"]
+  weight: ["400", "500", "600", "700"]
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3002"),
-  title: "GEN-H Studio | Premium Revenue Systems for Elite HVAC Brands",
+  title: "GEN-H Studio | Premium HVAC Growth Systems",
   description:
-    "Luxury-grade digital infrastructure for HVAC operators: premium acquisition sites, quoting funnels, and revenue orchestration deployed on Vercel.",
+    "A sleek full-stack site for HVAC growth: clear public positioning, structured lead capture, and a secure admin portal for operators.",
   openGraph: {
     title: "GEN-H Studio",
     description:
-      "Premium websites and revenue systems for HVAC operators that need more booked jobs, stronger margins, and cleaner field operations.",
+      "Premium websites and operator-ready lead systems for HVAC companies that need a better buying experience and a clearer pipeline.",
     type: "website"
   }
 };

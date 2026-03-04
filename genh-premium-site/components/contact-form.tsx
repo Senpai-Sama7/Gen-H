@@ -27,11 +27,13 @@ const initialState: FormState = {
   company: "",
   email: "",
   phone: "",
-  projectType: "Signature build",
-  budgetBand: "$12k - $25k",
+  projectType: "Revenue acceleration site",
+  budgetBand: "$25k - $50k",
   launchWindow: "Within 30 days",
   goals: ""
 };
+
+const snapshotCacheKey = "genh-premium-site:last-snapshot";
 
 export function ContactForm() {
   const [form, setForm] = useState<FormState>(initialState);
@@ -42,7 +44,8 @@ export function ContactForm() {
       form.name.trim().length >= 2 &&
       form.company.trim().length >= 2 &&
       form.email.includes("@") &&
-      form.goals.trim().length >= 20
+      form.phone.trim().length >= 7 &&
+      form.goals.trim().length >= 24
     );
   }, [form]);
 
@@ -51,8 +54,7 @@ export function ContactForm() {
     setSubmission({ status: "loading" });
 
     try {
-      const endpoint = new URL("/api/inquiries", window.location.origin).toString();
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/inquiries", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -60,10 +62,14 @@ export function ContactForm() {
         body: JSON.stringify(form)
       });
 
-      const payload = await response.json();
+      const payload = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        throw new Error(payload.message || "Submission failed.");
+      if (!response.ok || !payload?.record) {
+        throw new Error(payload?.message || "Submission failed.");
+      }
+
+      if (payload.snapshotPath && typeof window !== "undefined") {
+        window.sessionStorage.setItem(snapshotCacheKey, payload.snapshotPath);
       }
 
       setSubmission({
@@ -86,19 +92,19 @@ export function ContactForm() {
   }
 
   return (
-    <form className="contact-form" onSubmit={handleSubmit}>
-      <div className="form-grid two-up">
+    <form className="intake-form" onSubmit={handleSubmit}>
+      <div className="intake-grid split-two">
         <label>
-          Strategic contact
-          <input value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Name" />
+          Name
+          <input value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Full name" />
         </label>
         <label>
           Company
-          <input value={form.company} onChange={(event) => updateField("company", event.target.value)} placeholder="Company" />
+          <input value={form.company} onChange={(event) => updateField("company", event.target.value)} placeholder="Company name" />
         </label>
       </div>
 
-      <div className="form-grid two-up">
+      <div className="intake-grid split-two">
         <label>
           Email
           <input value={form.email} onChange={(event) => updateField("email", event.target.value)} placeholder="team@company.com" />
@@ -109,14 +115,14 @@ export function ContactForm() {
         </label>
       </div>
 
-      <div className="form-grid three-up">
+      <div className="intake-grid split-three">
         <label>
-          Build type
+          Project type
           <select value={form.projectType} onChange={(event) => updateField("projectType", event.target.value)}>
-            <option>Signature build</option>
-            <option>Growth refresh</option>
-            <option>Lead funnel rebuild</option>
-            <option>Multi-location rollout</option>
+            <option>Revenue acceleration site</option>
+            <option>Offer repositioning</option>
+            <option>Operator dashboard rollout</option>
+            <option>Multi-location relaunch</option>
           </select>
         </label>
         <label>
@@ -140,25 +146,25 @@ export function ContactForm() {
       </div>
 
       <label>
-        Commercial objective
+        What needs to improve?
         <textarea
           value={form.goals}
           onChange={(event) => updateField("goals", event.target.value)}
-          placeholder="Describe what needs to change: no-show rates, weak conversion, franchise scale-up, premium positioning, membership sales, dispatch overflow, or lead routing."
           rows={5}
+          placeholder="Explain the current bottleneck: weak lead quality, poor presentation, low-margin jobs, slow follow-up, dispatch friction, or lack of visibility."
         />
       </label>
 
-      <div className="form-actions">
+      <div className="form-surface-footer">
         <button className="primary-button" type="submit" disabled={!canSubmit || submission.status === "loading"}>
-          {submission.status === "loading" ? "Submitting strategic brief..." : "Book a strategy session"}
+          {submission.status === "loading" ? "Submitting brief..." : "Submit strategy brief"}
         </button>
-        <p className="form-footnote">Deployed on Vercel. Inquiries persist to Vercel Blob in production, or to local storage during development.</p>
+        <p className="micro-copy">The same backend stores the lead instantly and makes it available inside the admin portal.</p>
       </div>
 
       {submission.status !== "idle" ? (
-        <div className={`submission-banner ${submission.status}`}>
-          <strong>{submission.status === "success" ? "Inquiry confirmed" : "Submission blocked"}</strong>
+        <div className={`inline-alert ${submission.status === "success" ? "success" : "error"}`}>
+          <strong>{submission.status === "success" ? "Inquiry captured." : "Submission blocked."}</strong>
           <span>{submission.message}</span>
           {submission.detail ? <span>{submission.detail}</span> : null}
           {submission.record ? <span>Reference #{submission.record.id.slice(0, 8).toUpperCase()}</span> : null}
