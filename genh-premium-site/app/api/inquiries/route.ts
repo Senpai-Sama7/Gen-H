@@ -3,8 +3,51 @@ import { z } from "zod";
 
 import { createInquiry, getStorageMode, listInquiriesWithSnapshot } from "@/lib/inquiries";
 import { notifyNewInquiry } from "@/lib/notifications";
+import { rateLimit, RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
+
+// Rate limit settings for this endpoint
+const INQUIRY_RATE_LIMIT = {
+  maxRequests: 5, // 5 submissions per window
+  windowMs: 60 * 1000, // 1 minute
+};
+
+// In-memory rate limit store for this endpoint
+const inquiryRateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function checkInquiryRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
+  const now = Date.now();
+  const record = inquiryRateLimitMap.get(ip);
+
+  const resetTime = now + INQUIRY_RATE_LIMIT.windowMs;
+
+  if (!record || now > record.resetTime) {
+    inquiryRateLimitMap.set(ip, { count: 1, resetTime });
+    return { allowed: true, remaining: INQUIRY_RATE_LIMIT.maxRequests - 1, resetTime };
+  }
+
+  if (record.count >= INQUIRY_RATE_LIMIT.maxRequests) {
+    return { allowed: false, remaining: 0, resetTime: record.resetTime };
+  }
+
+  record.count++;
+  inquiryRateLimitMap.set(ip, record);
+
+  return {
+    allowed: true,
+    remaining: INQUIRY_RATE_LIMIT.maxRequests - record.count,
+    resetTime: record.resetTime
+  };
+}
+
+function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  return request.headers.get("x-real-ip") || "unknown";
+}
 
 const inquirySchema = z.object({
   name: z.string().min(2).max(80),
@@ -32,6 +75,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Rate limiting check
+  const clientIp = getClientIp(request);
+  const rateLimitResult = checkInquiryRateLimit(clientIp);
+
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Too many requests. Please try again later.",
+        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+          "X-RateLimit-Limit": INQUIRY_RATE_LIMIT.maxRequests.toString(),
+          "X-RateLimit-Remaining": "0"
+        }
+      }
+    );
+  }
+
   const payload = await request.json().catch(() => null);
   const parsed = inquirySchema.safeParse(payload);
 

@@ -2,33 +2,193 @@ name: Gen-H Premium Site CI
 
 on:
   push:
+    branches: [main]
     paths:
       - 'genh-premium-site/**'
       - '.github/workflows/genh-premium-site.yml'
   pull_request:
+    branches: [main]
     paths:
       - 'genh-premium-site/**'
       - '.github/workflows/genh-premium-site.yml'
 
+env:
+  NODE_VERSION: '20'
+
 jobs:
-  build:
+  # ─────────────────────────────────────────────────────────────
+  # Lint and Type Check
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: genh-premium-site
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: genh-premium-site/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Run ESLint
+        run: npm run lint
+        env:
+          NODE_ENV: production
+
+      - name: Check TypeScript
+        run: npm run type-check
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+  # ─────────────────────────────────────────────────────────────
+  # Unit & Integration Tests
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        working-directory: genh-premium-site
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: genh-premium-site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test -- --ci --coverage --maxWorkers=2
+        env:
+          NODE_ENV: test
+          OPS_BASIC_USER: testuser
+          OPS_BASIC_PASS: testpass
+          OPS_SESSION_SECRET: test-secret-key-for-testing-only-32chars
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          directory: genh-premium-site/coverage
+          fail_ci_if_error: false
+
+  # ─────────────────────────────────────────────────────────────
+  # Build
+  # ─────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    defaults:
+      run:
+        working-directory: genh-premium-site
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: genh-premium-site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
         run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: genh-premium-site/.next
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────
+  # Security Audit
+  # ─────────────────────────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: genh-premium-site
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: genh-premium-site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Check for known vulnerabilities
+        run: npm audit --json > audit-report.json || true
+        continue-on-error: true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: genh-premium-site/audit-report.json
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Deploy (only on push to main)
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://gen-h.vercel.app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: genh-premium-site
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for deployment..."
+          sleep 10
+          curl -s -o /dev/null -w "%{http_code}" https://gen-h.vercel.app/api/health
+        continue-on-error: true

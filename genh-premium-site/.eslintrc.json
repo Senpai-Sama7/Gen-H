@@ -1,0 +1,30 @@
+// genh-premium-site/.eslintrc.json
+{
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "prettier"
+  ],
+  "rules": {
+    // General rules
+    "no-console": "off",
+    "no-debugger": "warn",
+    "no-alert": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-template": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es6": true,
+    "jest": true
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    ".next/",
+    "dist/",
+    "build/",
+    "coverage/"
+  ]
+}

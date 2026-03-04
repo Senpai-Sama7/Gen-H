@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function NotFound() {
   return (
     <main className="site-shell" style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
@@ -9,12 +11,12 @@ export default function NotFound() {
           surface.
         </p>
         <div className="hero-actions">
-          <a className="primary-button" href="/">
+          <Link className="primary-button" href="/">
             Return home
-          </a>
-          <a className="secondary-link" href="/api/health">
+          </Link>
+          <Link className="secondary-link" href="/api/health">
             API health
-          </a>
+          </Link>
         </div>
       </section>
     </main>
