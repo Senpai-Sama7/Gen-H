@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { motion, useInView } from "framer-motion";
 import { useIsMobile, usePrefersReducedMotion } from "@/app/hooks/useMousePosition";
 import { MagneticButton } from "@/app/components/MagneticButton";
+import * as THREE from "three";
 
 function FluidBackground() {
   const meshRef = useRef<THREE.Mesh>(null);
@@ -170,7 +171,7 @@ const itemVariants = {
     opacity: 1,
     transition: {
       duration: 0.8,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as const,
     },
   },
 };

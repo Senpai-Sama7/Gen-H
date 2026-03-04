@@ -2,7 +2,7 @@
 
 import { useRef, useMemo, Suspense, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { useIsMobile, usePrefersReducedMotion } from "@/app/hooks/useMousePosition";
 import * as THREE from "three";
 
@@ -24,21 +24,19 @@ const funnelSteps = [
   },
 ];
 
-function PipelineScene({ activeStep }: { activeStep: number }) {
-  const particlesRef = useRef<THREE.Points>(null);
-  const tubeRef = useRef<THREE.Mesh>(null);
+function Particles({ particleCount = 200 }: { particleCount?: number }) {
+  const pointsRef = useRef<THREE.Points>(null);
 
-  const particleCount = 200;
-  const particles = useMemo(() => {
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    const speeds = new Float32Array(particleCount);
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(particleCount * 3);
+    const col = new Float32Array(particleCount * 3);
 
     for (let i = 0; i < particleCount; i++) {
       const t = i / particleCount;
-      positions[i * 3] = (t - 0.5) * 8;
-      positions[i * 3 + 1] = Math.sin(t * Math.PI) * 0.5;
-      positions[i * 3 + 2] = Math.cos(t * Math.PI) * 0.5;
+      pos[i * 3] = (t - 0.5) * 8;
+      pos[i * 3 + 1] = Math.sin(t * Math.PI) * 0.5;
+      pos[i * 3 + 2] = Math.cos(t * Math.PI) * 0.5;
 
       let color: THREE.Color;
       if (t < 0.33) {
@@ -48,16 +46,62 @@ function PipelineScene({ activeStep }: { activeStep: number }) {
       } else {
         color = new THREE.Color("#10b981");
       }
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-
-      speeds[i] = 0.5 + Math.random() * 0.5;
+      col[i * 3] = color.r;
+      col[i * 3 + 1] = color.g;
+      col[i * 3 + 2] = color.b;
     }
 
-    return { positions, colors, speeds };
-  }, []);
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    return geo;
+  }, [particleCount]);
 
+  useFrame((state) => {
+    if (pointsRef.current) {
+      const time = state.clock.elapsedTime;
+      const posAttr = pointsRef.current.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const colAttr = pointsRef.current.geometry.getAttribute("color") as THREE.BufferAttribute;
+
+      for (let i = 0; i < particleCount; i++) {
+        const t = ((i / particleCount + time * 0.1) % 1);
+        
+        posAttr.array[i * 3] = (t - 0.5) * 8;
+        posAttr.array[i * 3 + 1] = Math.sin(t * Math.PI) * 0.5 + Math.sin(time + i) * 0.1;
+        posAttr.array[i * 3 + 2] = Math.cos(t * Math.PI) * 0.5;
+
+        let color: THREE.Color;
+        if (t < 0.33) {
+          color = new THREE.Color("#71717a");
+        } else if (t < 0.66) {
+          color = new THREE.Color("#d4af37").multiplyScalar(1 + Math.sin(time * 2) * 0.2);
+        } else {
+          color = new THREE.Color("#10b981");
+        }
+
+        colAttr.array[i * 3] = color.r;
+        colAttr.array[i * 3 + 1] = color.g;
+        colAttr.array[i * 3 + 2] = color.b;
+      }
+
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+    }
+  });
+
+  return (
+    <points ref={pointsRef} geometry={geometry}>
+      <pointsMaterial
+        size={0.15}
+        vertexColors
+        transparent
+        opacity={0.8}
+        sizeAttenuation
+      />
+    </points>
+  );
+}
+
+function PipelineTube() {
   const tubeGeometry = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(-4, 0, 0),
@@ -68,78 +112,19 @@ function PipelineScene({ activeStep }: { activeStep: number }) {
     return new THREE.TubeGeometry(curve, 64, 0.3, 16, false);
   }, []);
 
-  useFrame((state) => {
-    if (particlesRef.current) {
-      const positions = particlesRef.current.geometry.attributes.position.array as Float32Array;
-      const colors = particlesRef.current.geometry.attributes.color.array as Float32Array;
-      const time = state.clock.elapsedTime;
-
-      for (let i = 0; i < particleCount; i++) {
-        const t = (i / particleCount + time * 0.1 * particles.speeds[i]) % 1;
-        
-        positions[i * 3] = (t - 0.5) * 8;
-        positions[i * 3 + 1] = Math.sin(t * Math.PI) * 0.5 + Math.sin(time + i) * 0.1;
-        positions[i * 3 + 2] = Math.cos(t * Math.PI) * 0.5;
-
-        const color: THREE.Color = t < 0.33
-          ? new THREE.Color("#71717a")
-          : t < 0.66
-            ? new THREE.Color("#d4af37").multiplyScalar(1 + Math.sin(time * 2) * 0.2)
-            : new THREE.Color("#10b981");
-        
-        if (activeStep === 0 && t > 0.33) continue;
-        if (activeStep === 1 && (t < 0.33 || t > 0.66)) continue;
-        if (activeStep === 2 && t < 0.66) continue;
-
-        colors[i * 3] = color.r;
-        colors[i * 3 + 1] = color.g;
-        colors[i * 3 + 2] = color.b;
-      }
-
-      particlesRef.current.geometry.attributes.position.needsUpdate = true;
-      particlesRef.current.geometry.attributes.color.needsUpdate = true;
-    }
-  });
-
   return (
-    <>
-      <mesh ref={tubeRef} geometry={tubeGeometry}>
-        <meshBasicMaterial
-          color="#d4af37"
-          transparent
-          opacity={0.15}
-          wireframe
-        />
-      </mesh>
-      <points ref={particlesRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={particleCount}
-            array={particles.positions}
-            itemSize={3}
-          />
-          <bufferAttribute
-            attach="attributes-color"
-            count={particleCount}
-            array={particles.colors}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          size={0.15}
-          vertexColors
-          transparent
-          opacity={0.8}
-          sizeAttenuation
-        />
-      </points>
-    </>
+    <mesh geometry={tubeGeometry}>
+      <meshBasicMaterial
+        color="#d4af37"
+        transparent
+        opacity={0.15}
+        wireframe
+      />
+    </mesh>
   );
 }
 
-function FunnelCanvas({ activeStep }: { activeStep: number }) {
-  const isMobile = useIsMobile();
+function FunnelCanvas() {
   const reducedMotion = usePrefersReducedMotion();
 
   if (reducedMotion) {
@@ -157,7 +142,8 @@ function FunnelCanvas({ activeStep }: { activeStep: number }) {
       <Suspense fallback={null}>
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 10, 10]} intensity={1} color="#d4af37" />
-        <PipelineScene activeStep={activeStep} />
+        <PipelineTube />
+        <Particles />
       </Suspense>
     </Canvas>
   );
@@ -166,14 +152,6 @@ function FunnelCanvas({ activeStep }: { activeStep: number }) {
 export function Funnel() {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeStep, setActiveStep] = useState(0);
-  const reducedMotion = usePrefersReducedMotion();
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
-
-  const stepProgress = useTransform(scrollYProgress, [0, 1], [0, 2]);
 
   const handleStepChange = (index: number) => {
     setActiveStep(index);
@@ -185,7 +163,7 @@ export function Funnel() {
     <section
       ref={sectionRef}
       id="funnel"
-      className="relative min-h-[300vh]"
+      className="relative min-h-[200vh]"
     >
       <div className="sticky top-0 h-screen flex items-center">
         <div className="w-full max-w-7xl mx-auto px-6 lg:px-8 py-20">
@@ -264,7 +242,7 @@ export function Funnel() {
             </div>
 
             <div className="lg:col-span-3 h-[400px] lg:h-[600px]">
-              <FunnelCanvas activeStep={activeStep} />
+              <FunnelCanvas />
             </div>
           </div>
         </div>
